@@ -12,8 +12,26 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
     }
+
+    static findByPhone(phone) {
+      return this.findOne({
+        where: {
+          phone: phone
+        }
+      })
+    }
+
+    static findActiveByDay(day) {
+      return this.findAll({
+        where: {
+          day: day,
+          isActive: true
+        }
+      })
+    }
   };
   Agent.init({
+    telegramId: DataTypes.INTEGER,
     phone: DataTypes.STRING,
     nickname: DataTypes.STRING,
     day: DataTypes.INTEGER,
@@ -22,6 +40,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Agent',
+    tableName: "agents",
   });
   return Agent;
 };

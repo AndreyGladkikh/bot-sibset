@@ -14,8 +14,17 @@ module.exports = {
       day: {
         type: Sequelize.INTEGER
       },
-      sort: {
+      priority: {
         type: Sequelize.INTEGER
+      },
+      isTest: {
+        type: Sequelize.BOOLEAN
+      },
+      mediaFile: {
+        type: Sequelize.STRING
+      },
+      mediaType: {
+        type: Sequelize.STRING
       },
       alias: {
         type: Sequelize.STRING
