@@ -75,6 +75,21 @@ bot.command('19', async (ctx) => {
     try {
         const q = await db.Question.findWithAnswersByDayAndNumber(2, number);
 
+        sequelize.query(`
+        select t.text, t.answers, t."rightanswerid", t."telegramId" from (select row_number() over (partition by ag.id order by q.priority) as rn,
+          (
+          select json_object_agg(id, text) from answers a where a."questionId" = q.id
+          ) as answers,
+          (
+          select id from answers a where a."questionId" = q.id and a."isRight" is true
+          ) as rightAnswerId,
+          *
+          from agents ag
+          left join questions q on ag."day" = q."day"
+          where ag.day = ${day}) as t
+        where t.rn = ${number}
+        `, {type: sequelize.QueryTypes.SELECT});
+
         number++
         await sendMessages(q)
 

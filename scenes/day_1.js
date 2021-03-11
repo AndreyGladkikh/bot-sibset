@@ -14,8 +14,9 @@ function getStage() {
     return new Promise(async (resolve, reject) => {
         try {
             const arScene = []
-            questions = await Question.getByDay(1)
+            const questions = await Question.findAllWithAnswers()
             for (question of questions) {
+                console.log(question)
                 const currentSceneId = SCENE_ID_PREFIX + question.id
                 const nextSceneId = SCENE_ID_PREFIX + (question.id + 1)
                 const scene = new Scenes.BaseScene(currentSceneId);
@@ -26,7 +27,7 @@ function getStage() {
                 const questionAlias = question.dataValues.alias
                 const questionMediaFile = question.dataValues.mediaFile
                 const questionMediaType = question.dataValues.mediaType
-                const questionVerifyingRequired = question.dataValues.verifyingrequired
+                const questionVerificationRequired = question.dataValues.verificationRequired
                 const rightAnswerId = question.dataValues.right_answer_id
                 const keyboard = createKeyboard(question, questionAnswers)
 
@@ -40,34 +41,43 @@ function getStage() {
                     // }
                     ctx.reply(
                         questionText,
-                        Markup.keyboard(keyboard).oneTime().resize())
+                        keyboard)
                 })
 
-                scene.use((ctx, next) => {
-                    if (!Object.values(questionAnswers).includes(ctx.message.text) && !ctx.message.contact) {
-                        ctx.reply(text.scene_answer_forbidden)
-                        return
-                    }
-
-                    ctx.session.answerId = Object.keys(questionAnswers).find(questionId => questionAnswers[questionId] === ctx.message.text)
-
-                    return next()
+                scene.on('text', (ctx, next) => {
+                    // if (!Object.values(questionAnswers).includes(ctx.message.text) && !ctx.message.contact) {
+                    //     ctx.reply(text.scene_answer_forbidden)
+                    //     return
+                    // }
+                    ctx.reply(text.scene_answer_forbidden)
                 })
 
                 scene.use(async (ctx, next) => {
+                    // if (!Object.values(questionAnswers).includes(ctx.message.text) && !ctx.message.contact) {
+                    //     ctx.reply(text.scene_answer_forbidden)
+                    //     return
+                    // }
                     if (questionAlias === SCENE_ALIAS_CONTACT_SHARE) {
                         if (ctx.message.contact) {
                             ctx.session.agent = await Agent.findByPhone(ctx.message.contact.phone_number) ||
                                 await Agent.create({
-                                telegramId: ctx.message.from.id,
-                                phone: ctx.message.contact.phone_number,
-                                nickname: ctx.message.from.username,
-                                day: 1,
-                                isActive: true,
-                            });
+                                    telegramId: ctx.message.from.id,
+                                    phone: ctx.message.contact.phone_number,
+                                    nickname: ctx.message.from.username,
+                                    day: 1,
+                                    isActive: true,
+                                });
                         }
-                    } else if (questionAlias === SCENE_ALIAS_WILL_YOU_COME) {
-                        if (ctx.message.text === questionAnswers[rightAnswerId]) {
+                    } else {
+                        ctx.session.answerId = ctx.callbackQuery.data
+                    }
+
+                    return next()
+                })
+
+                scene.on('callback_query', async (ctx, next) => {
+                    if (questionAlias === SCENE_ALIAS_WILL_YOU_COME) {
+                        if (Number(ctx.callbackQuery.data) === rightAnswerId) {
                             await ctx.reply(text.bye)
                             ctx.session.agent.isActive = true
                             ctx.session.currentSceneIsLast = true
@@ -78,11 +88,11 @@ function getStage() {
                         await ctx.reply(text.sorry)
                         ctx.session.currentSceneIsLast = true
                     } else {
-                        if (questionVerifyingRequired) {
-                            if (ctx.message.text === questionAnswers[rightAnswerId]) {
+                        if (questionVerificationRequired) {
+                            if (Number(ctx.callbackQuery.data) === rightAnswerId) {
                                 await ctx.reply(text.right_answer)
                             } else {
-                                await ctx.reply(text.wrong_answer + questionAnswers[rightAnswerId])
+                                await ctx.reply(`${text.wrong_answer} "${questionAnswers[rightAnswerId]}"`)
                             }
                         }
                     }
@@ -124,10 +134,12 @@ function createKeyboard(question, questionAnswers) {
         keyboard = [
             Markup.button.contactRequest(text.button_contact_share)
         ]
+        keyboard = Markup.keyboard(keyboard).oneTime().resize()
     } else {
         for (answer in questionAnswers) {
-            keyboard.push(Markup.button.callback(questionAnswers[answer], answer))
+            keyboard.push([Markup.button.callback(questionAnswers[answer], answer)])
         }
+        keyboard = Markup.inlineKeyboard(keyboard).oneTime().resize()
     }
 
     return keyboard

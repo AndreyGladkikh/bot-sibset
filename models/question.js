@@ -15,24 +15,81 @@ module.exports = (sequelize, DataTypes) => {
 
     static getByDay(day) {
       return sequelize.query(`
-        select q.id as id, q.text as text, (
-          select json_object_agg(sort, text) from answers a where a."questionId" = q.id
+        select q.id as id, q.text as text, alias, "isTest", q."mediaFile", q."mediaType", q."verificationRequired", (
+          select json_object_agg(id, text) from answers a where a."questionId" = q.id
         ) as answers,  (
-                 select sort from answers a where a."questionId" = q.id and a.right is true
-               ) as right_answer_id
+          select id from answers a where a."questionId" = q.id and a."isRight" is true
+        ) as right_answer_id
         from questions q
         where day = ${day}
-        order by sort
+        order by priority
         `, {
         model: this,
         mapToModel: true
       });
     }
+
+    static findAllWithAnswers() {
+      return sequelize.query(`
+        select row_number() over(partition by q.day order by q.priority) as number, q.id, q.text, alias, "isTest", q."mediaFile", q."mediaType", q."verificationRequired", (
+          select json_object_agg(id, text) from answers a where a."questionId" = q.id
+        ) as answers,  (
+          select id from answers a where a."questionId" = q.id and a."isRight" is true
+        ) as "rightAnswerId"
+        from questions q
+        `, {type: sequelize.QueryTypes.SELECT});
+    }
+
+    static findWithAnswersByDay(day) {
+      return sequelize.query(`
+        select q.id, q.text, q.alias, q."isTest", (
+          select json_object_agg(id, text) from answers a where a."questionId" = q.id
+        ) as answers,  (
+          select id from answers a where a."questionId" = q.id and a."isRight" is true
+        ) as rightAnswerId
+        from questions q
+        where day = ${day}
+        order by priority
+        `, {type: sequelize.QueryTypes.SELECT});
+    }
+
+    static findByAlias(alias) {
+      return sequelize.query(`
+        select q.id, q.text, q.alias, q."isTest", (
+          select json_object_agg(id, text) from answers a where a."questionId" = q.id
+        ) as answers,  (
+          select id from answers a where a."questionId" = q.id and a."isRight" is true
+        ) as rightAnswerId
+        from questions q
+        where alias = '${alias}'
+        order by priority
+        `, {type: sequelize.QueryTypes.SELECT});
+    }
+
+    static findWithAnswersByDayAndNumber(day, number) {
+      return sequelize.query(`
+        select t.text, t.answers, t."rightanswerid", t."telegramId" from (select row_number() over (partition by ag.id order by q.priority) as rn,
+          (
+          select json_object_agg(id, text) from answers a where a."questionId" = q.id
+          ) as answers,
+          (
+          select id from answers a where a."questionId" = q.id and a."isRight" is true
+          ) as rightAnswerId,
+          *
+          from agents ag
+          left join questions q on ag."day" = q."day"
+          where ag.day = ${day}) as t
+        where t.rn = ${number}
+        `, {type: sequelize.QueryTypes.SELECT});
+    }
   };
   Question.init({
     text: DataTypes.TEXT,
     day: DataTypes.INTEGER,
-    sort: DataTypes.INTEGER,
+    priority: DataTypes.INTEGER,
+    isTest: DataTypes.BOOLEAN,
+    mediaFile: DataTypes.STRING,
+    mediaType: DataTypes.STRING,
     alias: DataTypes.STRING
   }, {
     sequelize,
