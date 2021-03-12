@@ -40,15 +40,12 @@ function sendMessages(agents, messages) {
                         await bot.telegram.sendMessage(agent.telegramId, message.text,
                             Markup.keyboard(createKeyboard(message.answers)).oneTime().resize())
                         if (message.answers) {
-                            const sceneNumber = messageNumber
+                            const nextSceneId = `day_4_scene_${messageNumber}`
                             const messageAlias = message.alias
                             const messageAnswers = message.answers
                             const rightAnswerId = message.rightAnswerId
                             bot.use(async (ctx, next) => {
                                 ctx.session.agent = agent
-                                if (messageAlias === SCENE_ALIAS_AGENT_CALL_ANALYZE) {
-                                    ctx.scene.enter(`day_4_scene_${sceneNumber}`)
-                                }
                                 if (messageAlias === SCENE_ALIAS_WILL_YOU_COME) {
                                     if (ctx.message.text === messageAnswers[rightAnswerId]) {
                                         await ctx.reply(text.bye)
@@ -57,6 +54,22 @@ function sendMessages(agents, messages) {
                                     } else {
                                         ctx.session.agent.isActive = false
                                     }
+                                }
+                            })
+                            bot.use(async ctx => {
+                                await Test.create({
+                                    agentId: ctx.session.agent.id,
+                                    questionId: ctx.session.questionId,
+                                    answerId: ctx.session.answerId
+                                });
+
+                                if (!ctx.session.currentSceneIsLast) {
+                                    return ctx.scene.enter(nextSceneId);
+                                } else {
+                                    ctx.session.agent.lastQuestion = questionId
+                                    await ctx.session.agent.save()
+
+                                    return ctx.scene.leave()
                                 }
                             })
                             stop = true
@@ -71,7 +84,7 @@ function sendMessages(agents, messages) {
     })
 }
 
-bot.command('411', async (ctx) => {
+bot.command('4-11', async (ctx) => {
     try {
         messageNumber = 1
         agents = await db.Agent.findActiveByDay(4)

@@ -102,6 +102,9 @@ function getStage() {
                         return ctx.scene.enter(nextSceneId);
                     } else {
                         ctx.session.agent.lastQuestion = questionId
+                        if(ctx.session.agent.isActive) {
+                            ctx.session.agent.day = 2
+                        }
                         await ctx.session.agent.save()
 
                         return ctx.scene.leave()
