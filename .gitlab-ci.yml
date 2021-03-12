@@ -1,0 +1,102 @@
+stages:
+  - deploy_dev
+  - deploy_prod
+
+deploy_dev_norcom:
+  stage: deploy_dev_norcom
+  environment:
+    name: development
+  script:
+    - echo TEXT_FILE=$DEV_NOR_TEXT_FILE > .env.local
+    - echo BOT_TOKEN=$DEV_NOR_BOT_TOKEN >> .env.local
+    - echo HTTP_URL=$DEV_NOR_HTTP_URL >> .env.local
+    - echo SIBSET_RPC_URL=$DEV_NOR_SIBSET_RPC_URL >> .env.local
+    - echo SIBSET_USERNAME=$SIBSET_USERNAME >> .env.local
+    - echo SIBSET_PASSWORD=$SIBSET_PASSWORD >> .env.local
+    - echo DATABASE_URI=$DEV_NOR_DATABASE_URI >> .env.local
+    - echo LOGSTASH_TYPE=dev-c3po.norcom.ru >> .env.local
+    - echo LOG_LEVEL=debug >> .env.local
+    - npm i
+    - cross-env DATABASE_URI=$DEV_NOR_DATABASE_URI node_modules/.bin/sequelize-cli db:migrate
+    - pm2 startOrReload ecosystem.json --only server
+    - pm2 startOrReload ecosystem.json --only worker
+  only:
+    - master
+    - /^Web-/
+  tags:
+    - develop-nor
+  when: manual
+
+deploy_dev_sibset:
+  stage: deploy_dev_sibset
+  environment:
+    name: development
+  script:
+    - echo TEXT_FILE=$DEV_SIB_TEXT_FILE > .env.local
+    - echo BOT_TOKEN=$DEV_SIB_BOT_TOKEN >> .env.local
+    - echo HTTP_URL=$DEV_SIB_HTTP_URL >> .env.local
+    - echo SIBSET_RPC_URL=$DEV_SIB_SIBSET_RPC_URL >> .env.local
+    - echo SIBSET_USERNAME=$SIBSET_USERNAME >> .env.local
+    - echo SIBSET_PASSWORD=$SIBSET_PASSWORD >> .env.local
+    - echo DATABASE_URI=$DEV_SIB_DATABASE_URI >> .env.local
+    - echo LOGSTASH_TYPE=dev-c3po.sibset.ru >> .env.local
+    - echo LOG_LEVEL=debug >> .env.local
+    - npm i
+    - cross-env DATABASE_URI=$DEV_SIB_DATABASE_URI node_modules/.bin/sequelize-cli db:migrate
+    - pm2 startOrReload ecosystem.json --only server
+    - pm2 startOrReload ecosystem.json --only worker
+  only:
+    - master
+    - /^Web-/
+  tags:
+    - develop
+  when: manual
+
+
+deploy_prod_norcom:
+  stage: deploy_prod_norcom
+  environment:
+    name: production
+  script:
+    - echo TEXT_FILE=$PROD_NOR_TEXT_FILE > .env.local
+    - echo BOT_TOKEN=$PROD_NOR_BOT_TOKEN >> .env.local
+    - echo HTTP_URL=$PROD_NOR_HTTP_URL >> .env.local
+    - echo SIBSET_RPC_URL=$PROD_NOR_SIBSET_RPC_URL >> .env.local
+    - echo SIBSET_USERNAME=$SIBSET_USERNAME >> .env.local
+    - echo SIBSET_PASSWORD=$SIBSET_PASSWORD >> .env.local
+    - echo DATABASE_URI=$PROD_NOR_DATABASE_URI >> .env.local
+    - echo LOGSTASH_TYPE=c3po.norcom.ru >> .env.local
+    - echo LOG_LEVEL=info >> .env.local
+    - npm i
+    - cross-env DATABASE_URI=$PROD_NOR_DATABASE_URI node_modules/.bin/sequelize-cli db:migrate
+    - pm2 startOrReload ecosystem.json --only server --env production
+    - pm2 startOrReload ecosystem.json --only worker --env production
+  only:
+    - master
+  tags:
+    - prod-nor
+  when: manual
+
+deploy_prod_sibset:
+  stage: deploy_prod_sibset
+  environment:
+    name: production
+  script:
+    - echo TEXT_FILE=$PROD_SIB_TEXT_FILE > .env.local
+    - echo BOT_TOKEN=$PROD_SIB_BOT_TOKEN >> .env.local
+    - echo HTTP_URL=$PROD_SIB_HTTP_URL >> .env.local
+    - echo SIBSET_RPC_URL=$PROD_SIB_SIBSET_RPC_URL >> .env.local
+    - echo SIBSET_USERNAME=$SIBSET_USERNAME >> .env.local
+    - echo SIBSET_PASSWORD=$SIBSET_PASSWORD >> .env.local
+    - echo DATABASE_URI=$PROD_SIB_DATABASE_URI >> .env.local
+    - echo LOGSTASH_TYPE=c3po.sibset.ru >> .env.local
+    - echo LOG_LEVEL=info >> .env.local
+    - npm i
+    - cross-env DATABASE_URI=$PROD_SIB_DATABASE_URI node_modules/.bin/sequelize-cli db:migrate
+    - pm2 startOrReload ecosystem.json --only server --env production
+    - pm2 startOrReload ecosystem.json --only worker --env production
+  only:
+    - master
+  tags:
+    - prod
+  when: manual

@@ -39,11 +39,18 @@ function getStage() {
                     // }
                     ctx.reply(
                         questionText,
-                        keyboard)
+                        Markup.keyboard(keyboard).oneTime().resize())
                 })
 
-                scene.on('text', (ctx, next) => {
-                    ctx.reply(text.scene_answer_forbidden)
+                scene.use((ctx, next) => {
+                    if (!Object.values(questionAnswers).includes(ctx.message.text) && !ctx.message.contact) {
+                        ctx.reply(text.scene_answer_forbidden)
+                        return
+                    }
+
+                    ctx.session.answerId = Object.keys(questionAnswers).find(questionId => questionAnswers[questionId] === ctx.message.text)
+
+                    return next()
                 })
 
                 scene.use(async (ctx, next) => {
@@ -58,16 +65,8 @@ function getStage() {
                                     isActive: true,
                                 });
                         }
-                    } else {
-                        ctx.session.answerId = ctx.callbackQuery.data
-                    }
-
-                    return next()
-                })
-
-                scene.on('callback_query', async (ctx, next) => {
-                    if (questionAlias === SCENE_ALIAS_WILL_YOU_COME) {
-                        if (Number(ctx.callbackQuery.data) === rightAnswerId) {
+                    } else if (questionAlias === SCENE_ALIAS_WILL_YOU_COME) {
+                        if (ctx.message.text === questionAnswers[rightAnswerId]) {
                             await ctx.reply(text.bye)
                             ctx.session.agent.isActive = true
                             ctx.session.currentSceneIsLast = true
@@ -79,7 +78,7 @@ function getStage() {
                         ctx.session.currentSceneIsLast = true
                     } else {
                         if (questionVerificationRequired) {
-                            if (Number(ctx.callbackQuery.data) === rightAnswerId) {
+                            if (ctx.message.text === questionAnswers[rightAnswerId]) {
                                 await ctx.reply(text.right_answer)
                             } else {
                                 await ctx.reply(`${text.wrong_answer} "${questionAnswers[rightAnswerId]}"`)
@@ -124,12 +123,10 @@ function createKeyboard(question, questionAnswers) {
         keyboard = [
             Markup.button.contactRequest(text.button_contact_share)
         ]
-        keyboard = Markup.keyboard(keyboard).oneTime().resize()
     } else {
         for (answer in questionAnswers) {
             keyboard.push([Markup.button.callback(questionAnswers[answer], answer)])
         }
-        keyboard = Markup.inlineKeyboard(keyboard).oneTime().resize()
     }
 
     return keyboard

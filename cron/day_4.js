@@ -6,6 +6,7 @@ const bot = require('../bot')
 
 const AGENTS_CHUNK_SIZE = 30
 const SCENE_ALIAS_AGENT_CALL_ANALYZE = 'agent-call-analyze'
+const SCENE_ALIAS_WILL_YOU_COME = 'will-you-come'
 
 let messageNumber = 0
 let agents
@@ -24,33 +25,12 @@ function createKeyboard(questionAnswers) {
     return keyboard
 }
 
-// function sendMessages(messages) {
-//     return new Promise(async (resolve, reject) => {
-//         dance:
-//         for (let i = 0; i < messages.length; i += MESSAGES_CHUNK_SIZE) {
-//             messagesChunk = messages.slice(i, i + MESSAGES_CHUNK_SIZE);
-//             for (message of messagesChunk) {
-//                 await bot.telegram.sendMessage(message.telegramId, message.text, createKeyboard(message.answers))
-//                 if(message.answers) {
-//                     bot.on('callback_query', async (ctx, next) => {
-//                         ctx.scene.enter(`day_2_scene_${+number + 1}`)
-//                     })
-//                     break dance
-//                 }
-//             }
-//             await delay(1000)
-//         }
-//         return resolve()
-//     })
-// }
-
 function sendMessages(agents, messages) {
     return new Promise(async (resolve, reject) => {
         if(!Array.isArray(messages)) {
             messages = [messages]
         }
         let stop = false
-        // let messageNumber = 1
         for(message of messages) {
             if(!stop) {
                 messageNumber++
@@ -62,10 +42,21 @@ function sendMessages(agents, messages) {
                         if (message.answers) {
                             const sceneNumber = messageNumber
                             const messageAlias = message.alias
+                            const messageAnswers = message.answers
+                            const rightAnswerId = message.rightAnswerId
                             bot.use(async (ctx, next) => {
+                                ctx.session.agent = agent
                                 if (messageAlias === SCENE_ALIAS_AGENT_CALL_ANALYZE) {
-                                    ctx.session.agent = agent
-                                    ctx.scene.enter(`day_2_scene_${sceneNumber}`)
+                                    ctx.scene.enter(`day_4_scene_${sceneNumber}`)
+                                }
+                                if (messageAlias === SCENE_ALIAS_WILL_YOU_COME) {
+                                    if (ctx.message.text === messageAnswers[rightAnswerId]) {
+                                        await ctx.reply(text.bye)
+                                        ctx.session.agent.isActive = true
+                                        ctx.session.currentSceneIsLast = true
+                                    } else {
+                                        ctx.session.agent.isActive = false
+                                    }
                                 }
                             })
                             stop = true
@@ -80,46 +71,13 @@ function sendMessages(agents, messages) {
     })
 }
 
-bot.command('210', async (ctx) => {
+bot.command('411', async (ctx) => {
     try {
         messageNumber = 1
-        agents = await db.Agent.findActiveByDay(2)
-        questions = await db.Question.findWithAnswersByDayGtNumber(2, messageNumber)
+        agents = await db.Agent.findActiveByDay(4)
+        questions = await db.Question.findWithAnswersByDayGtNumber(4, messageNumber)
 
         await sendMessages(agents, questions[0])
-
-        // const question = await db.Question.findByAlias('good-morning');
-
-        // const q = await db.Question.findWithAnswersByDayAndNumber(2, number);
-
-        // const questions = await db.sequelize.query(`
-        // select (select text from questions q where q.day = a.day order by priority limit 1 offset ${offset}) as "questionText",
-        //  (select json_object_agg(id, text) from answers a where a."questionId" = q.id order by priority) as "questionAnswers",*
-        // from agents a
-        // where day = 2
-        // `, {type: db.sequelize.QueryTypes.SELECT});
-        // messageNumber++
-
-        // await sendMessages(q)
-    } catch (e) {
-        console.log(e.message)
-    }
-})
-
-bot.command('218', async (ctx) => {
-    try {
-        questions = await db.Question.findWithAnswersByDayGtNumber(2, messageNumber)
-        await sendMessages(agents, questions[0])
-        // messageNumber++
-    } catch (e) {
-        console.log(e.message)
-    }
-})
-
-bot.command('219', async (ctx) => {
-    try {
-        questions = await db.Question.findWithAnswersByDayGtNumber(2, messageNumber)
-        await sendMessages(agents, questions)
     } catch (e) {
         console.log(e.message)
     }
