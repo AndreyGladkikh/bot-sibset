@@ -17,6 +17,9 @@ const stageDayOne = require('./scenes/day_1.js').getStage()
         bot.on('text', ctx => {
             ctx.reply('main ctx')
         })
+
+
+
         bot.launch()
     })
 

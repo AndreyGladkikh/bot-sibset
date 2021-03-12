@@ -31,7 +31,7 @@ module.exports = (sequelize, DataTypes) => {
 
     static findAllWithAnswers() {
       return sequelize.query(`
-        select row_number() over(partition by q.day order by q.priority) as number, q.id, q.text, alias, "isTest", q."mediaFile", q."mediaType", q."verificationRequired", (
+        select row_number() over(partition by q.day order by q.priority) as number, q.id, q.text, q.alias, q."isTest", q."mediaFile", q."mediaType", q."verificationRequired", q.day, (
           select json_object_agg(id, text) from answers a where a."questionId" = q.id
         ) as answers,  (
           select id from answers a where a."questionId" = q.id and a."isRight" is true
@@ -66,20 +66,17 @@ module.exports = (sequelize, DataTypes) => {
         `, {type: sequelize.QueryTypes.SELECT});
     }
 
-    static findWithAnswersByDayAndNumber(day, number) {
+    static findWithAnswersByDayGtNumber(day, number) {
       return sequelize.query(`
-        select t.text, t.answers, t."rightanswerid", t."telegramId" from (select row_number() over (partition by ag.id order by q.priority) as rn,
-          (
-          select json_object_agg(id, text) from answers a where a."questionId" = q.id
-          ) as answers,
-          (
-          select id from answers a where a."questionId" = q.id and a."isRight" is true
-          ) as rightAnswerId,
-          *
-          from agents ag
-          left join questions q on ag."day" = q."day"
-          where ag.day = ${day}) as t
-        where t.rn = ${number}
+        select * from (select row_number() over(order by priority), q.id, q.text, q.alias, q."isTest", (
+            select json_object_agg(id, text) from answers a where a."questionId" = q.id
+          ) as answers,  (
+            select id from answers a where a."questionId" = q.id and a."isRight" is true
+          ) as rightAnswerId
+          from questions q
+          where day = ${day}
+          order by priority) as t
+        where t.row_number >= ${number}
         `, {type: sequelize.QueryTypes.SELECT});
     }
   };

@@ -1,14 +1,13 @@
 const { Scenes, Markup } = require('telegraf')
 const text = require('../text/scenes.json')
-const models = require('../models')
-const Question = models.Question
-const Agent = models.Agent
-const Test = models.Test
+const db = require('../models')
+const Question = db.Question
+const Agent = db.Agent
+const Test = db.Test
 
 const SCENE_ALIAS_CONTACT_SHARE = 'contact-share'
 const SCENE_ALIAS_WILL_YOU_COME = 'will-you-come'
 const SCENE_ALIAS_WHY_WONT_YOU_COME = 'why-wont-you-come'
-const SCENE_ID_PREFIX = 'day_1_scene_'
 
 function getStage() {
     return new Promise(async (resolve, reject) => {
@@ -16,19 +15,18 @@ function getStage() {
             const arScene = []
             const questions = await Question.findAllWithAnswers()
             for (question of questions) {
-                console.log(question)
-                const currentSceneId = SCENE_ID_PREFIX + question.id
-                const nextSceneId = SCENE_ID_PREFIX + (question.id + 1)
+                const currentSceneId = `day_${question.day}_scene_${question.number}`
+                const nextSceneId = `day_${question.day}_scene_${+question.number + 1}`
                 const scene = new Scenes.BaseScene(currentSceneId);
 
-                const questionId = question.dataValues.id;
-                const questionText = question.dataValues.text;
-                const questionAnswers = question.dataValues.answers
-                const questionAlias = question.dataValues.alias
-                const questionMediaFile = question.dataValues.mediaFile
-                const questionMediaType = question.dataValues.mediaType
-                const questionVerificationRequired = question.dataValues.verificationRequired
-                const rightAnswerId = question.dataValues.right_answer_id
+                const questionId = question.id;
+                const questionText = question.text;
+                const questionAnswers = question.answers
+                const questionAlias = question.alias
+                const questionMediaFile = question.mediaFile
+                const questionMediaType = question.mediaType
+                const questionVerificationRequired = question.verificationRequired
+                const rightAnswerId = question.rightAnswerId
                 const keyboard = createKeyboard(question, questionAnswers)
 
                 scene.enter(ctx => {
@@ -45,18 +43,10 @@ function getStage() {
                 })
 
                 scene.on('text', (ctx, next) => {
-                    // if (!Object.values(questionAnswers).includes(ctx.message.text) && !ctx.message.contact) {
-                    //     ctx.reply(text.scene_answer_forbidden)
-                    //     return
-                    // }
                     ctx.reply(text.scene_answer_forbidden)
                 })
 
                 scene.use(async (ctx, next) => {
-                    // if (!Object.values(questionAnswers).includes(ctx.message.text) && !ctx.message.contact) {
-                    //     ctx.reply(text.scene_answer_forbidden)
-                    //     return
-                    // }
                     if (questionAlias === SCENE_ALIAS_CONTACT_SHARE) {
                         if (ctx.message.contact) {
                             ctx.session.agent = await Agent.findByPhone(ctx.message.contact.phone_number) ||
