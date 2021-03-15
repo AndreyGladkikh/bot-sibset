@@ -1,5 +1,6 @@
 require('dotenv-flow').config();
 const {Scenes, session, Telegraf, Markup} = require('telegraf')
+const fs = require('fs')
 
 const token = process.env.BOT_TOKEN
 

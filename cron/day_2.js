@@ -50,7 +50,6 @@ function sendMessages(agents, messages) {
             messages = [messages]
         }
         let stop = false
-        // let messageNumber = 1
         for(message of messages) {
             if(!stop) {
                 messageNumber++

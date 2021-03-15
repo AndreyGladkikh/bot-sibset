@@ -37,8 +37,22 @@ function sendMessages(agents, messages) {
                 for (let i = 0; i < agents.length; i += AGENTS_CHUNK_SIZE) {
                     agentsChunk = agents.slice(i, i + AGENTS_CHUNK_SIZE);
                     for (agent of agentsChunk) {
-                        await bot.telegram.sendMessage(agent.telegramId, message.text,
-                            Markup.keyboard(createKeyboard(message.answers)).oneTime().resize())
+                        if(questionMediaType === MEDIA_TYPE_PHOTO) {
+                            bot.telegram.sendPhoto(
+                                agent.telegramId,
+                                { source: './public' + questionMediaFile },
+                                {caption: questionText, reply_markup: Markup.keyboard(keyboard).oneTime().resize().reply_markup}
+                            )
+                        } else if(questionMediaType === MEDIA_TYPE_AUDIO) {
+                            bot.telegram.sendAudio(
+                                agent.telegramId,
+                                { source: './public' + questionMediaFile },
+                                {caption: questionText, reply_markup: Markup.keyboard(keyboard).oneTime().resize().reply_markup}
+                            )
+                        } else {
+                            await bot.telegram.sendMessage(agent.telegramId, message.text,
+                                Markup.keyboard(createKeyboard(message.answers)).oneTime().resize())
+                        }
                         if (message.answers) {
                             const nextSceneId = `day_4_scene_${messageNumber}`
                             const messageAlias = message.alias
