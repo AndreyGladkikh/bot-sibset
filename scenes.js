@@ -1,6 +1,6 @@
 const { Scenes, Markup } = require('telegraf')
-const text = require('../text/scenes.json')
-const db = require('../models')
+const text = require('./text/scenes.json')
+const db = require('./models')
 const Question = db.Question
 const Agent = db.Agent
 const Test = db.Test
@@ -8,6 +8,7 @@ const Test = db.Test
 const SCENE_ALIAS_CONTACT_SHARE = 'contact-share'
 const SCENE_ALIAS_WILL_YOU_COME = 'will-you-come'
 const SCENE_ALIAS_WHY_WONT_YOU_COME = 'why-wont-you-come'
+const SCENE_ALIAS_FOCUS_ON_SALES = 'focus-on-sales'
 
 const MEDIA_TYPE_PHOTO = 'photo'
 const MEDIA_TYPE_AUDIO = 'audio'
@@ -26,28 +27,32 @@ function getStage() {
                 const questionText = question.text;
                 const questionAnswers = question.answers
                 const questionAlias = question.alias
+                const questionDay = question.day
                 const questionMediaFile = question.mediaFile
                 const questionMediaType = question.mediaType
                 const questionVerificationRequired = question.verificationRequired
                 const rightAnswerId = question.rightAnswerId
                 const keyboard = createKeyboard(question, questionAnswers)
 
-                scene.enter(ctx => {
+                scene.enter(async ctx => {
                     ctx.session.questionId = questionId
                     ctx.session.currentSceneIsLast = false
 
                     if(questionMediaType === MEDIA_TYPE_PHOTO) {
-                        ctx.replyWithPhoto(
+                        await ctx.replyWithPhoto(
                             { source: './public' + questionMediaFile },
                             {caption: questionText, reply_markup: Markup.keyboard(keyboard).oneTime().resize().reply_markup}
                         )
                     } else if(questionMediaType === MEDIA_TYPE_AUDIO) {
-                        ctx.replyWithAudio(
+                        await ctx.replyWithAudio(
                             { source: './public' + questionMediaFile },
                             {caption: questionText, reply_markup: Markup.keyboard(keyboard).oneTime().resize().reply_markup}
                         )
                     } else {
-                        ctx.reply(
+                        if(questionId === 1 && questionDay === 1) {
+                            await ctx.replyWithSticker('CAACAgIAAxkBAAIRSmBPpPhOGRmQ6l4WRCG7TW6h7WFZAAKhDwAC1dCASq0q2GjCd5-hHgQ')
+                        }
+                        await ctx.reply(
                             questionText,
                             Markup.keyboard(keyboard).oneTime().resize())
                     }
@@ -87,11 +92,17 @@ function getStage() {
                     } else if (questionAlias === SCENE_ALIAS_WHY_WONT_YOU_COME) {
                         await ctx.reply(text.sorry)
                         ctx.session.currentSceneIsLast = true
+                    } else if (questionAlias === SCENE_ALIAS_FOCUS_ON_SALES) {
+                        ctx.session.currentSceneIsLast = true
                     } else {
                         if (questionVerificationRequired) {
+                            console.log(ctx.message.text)
+                            console.log(questionAnswers)
                             if (ctx.message.text === questionAnswers[rightAnswerId]) {
+                                await ctx.replyWithSticker('CAACAgIAAxkBAAIRSWBPpNVTCNJGM_CcGW04PR8pGiX8AAJ1CwACs954Sq85dnr2IiD9HgQ')
                                 await ctx.reply(text.right_answer)
                             } else {
+                                await ctx.replyWithSticker('CAACAgIAAxkBAAIRSGBPpHSihII94cMFXyBahOHIijojAAK2DQAC2uB4SgAByauuNDzOAAEeBA')
                                 await ctx.reply(`${text.wrong_answer} "${questionAnswers[rightAnswerId]}"`)
                             }
                         }
@@ -114,10 +125,10 @@ function getStage() {
                     } else {
                         ctx.session.agent.lastQuestion = questionId
                         if(ctx.session.agent.isActive) {
-                            ctx.session.agent.day = 2
+                            // ctx.session.agent.day++
                         }
                         await ctx.session.agent.save()
-
+                        await ctx.replyWithSticker('CAACAgIAAxkBAAIRR2BPo8b3TA6EvESexah3gHIWLFFIAAIoAAMXEJ0H4p8QoS2fE6keBA')
                         return ctx.scene.leave()
                     }
                 })

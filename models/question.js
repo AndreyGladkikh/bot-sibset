@@ -68,11 +68,11 @@ module.exports = (sequelize, DataTypes) => {
 
     static findWithAnswersByDayGtNumber(day, number) {
       return sequelize.query(`
-        select * from (select row_number() over(order by priority), q.id, q.text, q.alias, q."isTest", (
+        select * from (select row_number() over(order by priority), q.id, q.text, q.alias, q."isTest", q."mediaType", q."mediaFile", q."verificationRequired", (
             select json_object_agg(id, text) from answers a where a."questionId" = q.id
           ) as answers,  (
             select id from answers a where a."questionId" = q.id and a."isRight" is true
-          ) as rightAnswerId
+          ) as "rightAnswerId"
           from questions q
           where day = ${day}
           order by priority) as t
