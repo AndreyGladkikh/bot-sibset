@@ -45,7 +45,7 @@ function sendMessages(agents, messages, context) {
         let stop = false
         for(message of messages) {
             if(!stop) {
-                console.log(message.alias)
+                console.log(message)
                 context.messageNumber++
                 const keyboard = createKeyboard(message.answers)
                 for (let i = 0; i < agents.length; i += MESSAGES_PER_SECOND_LIMIT) {
@@ -71,6 +71,7 @@ function sendMessages(agents, messages, context) {
                             const nextSceneId = `day_${context.day}_scene_${context.messageNumber}`
                             const messageAlias = message.alias
                             await bot.use(async (ctx, next) => {
+                                console.log(messageAlias)
                                 ctx.session.currentSceneIsLast = false
                                 ctx.session.agent = agent
                                 // if (messageAlias === SCENE_ALIAS_AGENT_CALL_ANALYZE) {
