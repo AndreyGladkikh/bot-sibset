@@ -40,6 +40,17 @@ module.exports = (sequelize, DataTypes) => {
         `, {type: sequelize.QueryTypes.SELECT});
     }
 
+    static async findIdOfTheLastByDay(day) {
+      const result = await sequelize.query(`
+        select id
+        from questions q
+        where day = ${day}
+        order by priority desc
+        limit 1
+        `, {type: sequelize.QueryTypes.SELECT, plain: true});
+      return result.id
+    }
+
     static findWithAnswersByDay(day) {
       return sequelize.query(`
         select q.id, q.text, q.alias, q."isTest", (
@@ -66,18 +77,22 @@ module.exports = (sequelize, DataTypes) => {
         `, {type: sequelize.QueryTypes.SELECT});
     }
 
-    static findWithAnswersByDayGtNumber(day, number) {
-      return sequelize.query(`
-        select * from (select row_number() over(order by priority), q.id, q.text, q.alias, q."isTest", q."mediaType", q."mediaFile", q."verificationRequired", (
-            select json_object_agg(id, text) from answers a where a."questionId" = q.id
-          ) as answers,  (
-            select id from answers a where a."questionId" = q.id and a."isRight" is true
-          ) as "rightAnswerId"
-          from questions q
-          where day = ${day}
-          order by priority) as t
-        where t.row_number >= ${number}
-        `, {type: sequelize.QueryTypes.SELECT});
+    static findWithAnswersByDayGtNumber(day, number, limit) {
+      let sql = `
+          select * from (select row_number() over(order by priority) as number, q.id, q.text, q.day, q.alias, q."isTest", q."mediaType", q."mediaFile", q."verificationRequired", (
+              select json_object_agg(id, text) from answers a where a."questionId" = q.id
+            ) as answers,  (
+              select id from answers a where a."questionId" = q.id and a."isRight" is true
+            ) as "rightAnswerId"
+            from questions q
+            where day = ${day}
+            order by priority) as t
+          where t.number >= ${number} 
+        `
+      if(limit) {
+        sql += `limit ${limit}`
+      }
+      return sequelize.query(sql, {type: sequelize.QueryTypes.SELECT});
     }
   };
   Question.init({

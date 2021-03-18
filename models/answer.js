@@ -12,6 +12,16 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
     }
+
+    static findAllWithQuestions() {
+      return sequelize.query(`
+        select dense_rank() over(partition by q.day order by q.priority) as "questionNumber", q.alias, q."verificationRequired", q.day, a.id, (
+          select id from answers a where a."questionId" = q.id and a."isRight" is true
+        ) as "rightAnswerId"
+        from questions q
+          left join answers a on q.id = a."questionId"
+        `, {type: sequelize.QueryTypes.SELECT});
+    }
   };
   Answer.init({
     text: DataTypes.STRING,

@@ -3,6 +3,7 @@ const {Scenes, session, Telegraf, Markup} = require('telegraf')
 const fs = require('fs')
 const scenes = require('./scenes.js')
 const text = require('./text/scenes.json')
+const handleAnswer = require('./agent-answers-handler')
 const db = require('./models')
 const Question = db.Question
 const Agent = db.Agent
@@ -12,24 +13,31 @@ const MESSAGES_PER_SECOND_LIMIT = 30
 const MEDIA_TYPE_PHOTO = 'photo'
 const MEDIA_TYPE_AUDIO = 'audio'
 
-const SCENE_ALIAS_AGENT_CALL_ANALYZE = 'agent-call-analyze'
-const SCENE_ALIAS_CONTACT_SHARE = 'contact-share'
-const SCENE_ALIAS_WILL_YOU_COME = 'will-you-come'
-const SCENE_ALIAS_WHY_WONT_YOU_COME = 'why-wont-you-come'
-const SCENE_ALIAS_FOCUS_ON_SALES = 'focus-on-sales'
-const SCENE_ALIAS_CALCULATE_MOTIVATION = 'calculate-motivation'
+const STICKER_ID_GREETING = 'CAACAgIAAxkBAAIRSmBPpPhOGRmQ6l4WRCG7TW6h7WFZAAKhDwAC1dCASq0q2GjCd5-hHgQ'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
 function initializeBot() {
     return new Promise(async (resolve, reject) => {
         const stage = await scenes.getStage()
+        const questions = await Question.findAllWithAnswers()
 
         bot.use(session())
         bot.use(stage.middleware())
 
-        bot.command('start', ctx => {
-            ctx.scene.enter('day_1_scene_1')
+        bot.command('start', async ctx => {
+            // ctx.scene.enter('day_1_scene_1')
+            const message = await Question.findWithAnswersByDayGtNumber(1, 1, 1)
+            await sendMessage(message[0], ctx.message.from.id)
+        })
+
+        bot.on('callback_query',async(ctx, next) => {
+            const question = questions.find((element, index, array) => {
+                return element.answers && String(ctx.callbackQuery.data) in element.answers
+            })
+            if(question) {
+                await handleAnswer(ctx, question)
+            }
         })
 
         bot.launch()
@@ -37,96 +45,25 @@ function initializeBot() {
     })
 }
 
-function sendMessages(agents, messages, context) {
+function sendMessages(day, fromMessageNumber, quantity) {
     return new Promise(async (resolve, reject) => {
+        const agents = await db.Agent.findActiveByDay(day)
+        let messages = await db.Question.findWithAnswersByDayGtNumber(day, fromMessageNumber, quantity)
+
         if(!Array.isArray(messages)) {
             messages = [messages]
         }
         let stop = false
-        for(message of messages) {
+        for(let message of messages) {
             if(!stop) {
-                console.log(message)
-                context.messageNumber++
-                const keyboard = createKeyboard(message.answers)
+                // context.messageNumber++
                 for (let i = 0; i < agents.length; i += MESSAGES_PER_SECOND_LIMIT) {
-                    agentsChunk = agents.slice(i, i + MESSAGES_PER_SECOND_LIMIT);
-                    for (agent of agentsChunk) {
-                        if(message.mediaType === MEDIA_TYPE_PHOTO) {
-                            await bot.telegram.sendPhoto(
-                                agent.telegramId,
-                                { source: './public' + message.mediaFile },
-                                {caption: message.text, reply_markup: Markup.keyboard(keyboard).oneTime().resize().reply_markup}
-                            )
-                        } else if(message.mediaType === MEDIA_TYPE_AUDIO) {
-                            await bot.telegram.sendAudio(
-                                agent.telegramId,
-                                { source: './public' + message.mediaFile },
-                                {caption: message.text, reply_markup: Markup.keyboard(keyboard).oneTime().resize().reply_markup}
-                            )
-                        } else {
-                            await bot.telegram.sendMessage(agent.telegramId, message.text,
-                                Markup.keyboard(keyboard).oneTime().resize())
-                        }
-                        if (message.answers) {
-                            const nextSceneId = `day_${context.day}_scene_${context.messageNumber}`
-                            const messageAlias = message.alias
-                            await bot.use(async (ctx, next) => {
-                                console.log(messageAlias)
-                                ctx.session.currentSceneIsLast = false
-                                ctx.session.agent = agent
-                                // if (messageAlias === SCENE_ALIAS_AGENT_CALL_ANALYZE) {
-                                //     ctx.scene.enter(sceneId)
-                                // }
-                                if (messageAlias === SCENE_ALIAS_WILL_YOU_COME) {
-                                    if (ctx.message.text === messageAnswers[rightAnswerId]) {
-                                        await ctx.reply(text.bye)
-                                        ctx.session.agent.isActive = true
-                                        ctx.session.currentSceneIsLast = true
-                                    } else {
-                                        ctx.session.agent.isActive = false
-                                    }
-                                }
-                                if (messageAlias === SCENE_ALIAS_FOCUS_ON_SALES) {
-                                    if (ctx.message.text === messageAnswers[rightAnswerId]) {
-                                        ctx.session.agent.isActive = true
-                                    } else {
-                                        ctx.session.currentSceneIsLast = true
-                                        ctx.session.agent.isActive = false
-                                        await ctx.reply(text.sorry)
-                                    }
-                                }
-                                if (messageAlias === SCENE_ALIAS_CALCULATE_MOTIVATION) {
-                                    ctx.session.currentSceneIsLast = true
-                                }
-                                if (message.verificationRequired) {
-                                    if (ctx.message.text === message.answers[message.rightAnswerId]) {
-                                        await ctx.replyWithSticker('CAACAgIAAxkBAAIRSWBPpNVTCNJGM_CcGW04PR8pGiX8AAJ1CwACs954Sq85dnr2IiD9HgQ')
-                                        await ctx.reply(text.right_answer)
-                                    } else {
-                                        await ctx.replyWithSticker('CAACAgIAAxkBAAIRSGBPpHSihII94cMFXyBahOHIijojAAK2DQAC2uB4SgAByauuNDzOAAEeBA')
-                                        await ctx.reply(`${text.wrong_answer} "${message.answers[message.rightAnswerId]}"`)
-                                    }
-                                }
-                                return next()
-                            })
-                            await bot.use(async ctx => {
-                                await Test.create({
-                                    agentId: ctx.session.agent.id,
-                                    questionId: ctx.session.questionId,
-                                    answerId: ctx.session.answerId
-                                });
-
-                                if (!ctx.session.currentSceneIsLast) {
-                                    return ctx.scene.enter(nextSceneId);
-                                } else {
-                                    ctx.session.agent.lastQuestion = message.id
-                                    await ctx.session.agent.save()
-
-                                    return ctx.scene.leave()
-                                }
-                            })
-                            stop = true
-                        }
+                    const agentsChunk = agents.slice(i, i + MESSAGES_PER_SECOND_LIMIT);
+                    for (let agent of agentsChunk) {
+                        await sendMessage(message, agent.telegramId)
+                    }
+                    if (message.answers) {
+                        stop = true
                     }
                     await delay(1000)
                 }
@@ -137,13 +74,68 @@ function sendMessages(agents, messages, context) {
     })
 }
 
-function createKeyboard(questionAnswers) {
+function sendMessage(message, telegramId) {
+    return new Promise(async (resolve, reject) => {
+        const keyboard = createKeyboard(message)
+
+        let messageText = message.text
+        if(message.verificationRequired) {
+            messageText += "\n"
+            let i = 0
+            for (let answer in questionAnswers) {
+                messageText += `\n${++i}. ${questionAnswers[answer]}`
+            }
+        }
+
+        if(message.mediaType === MEDIA_TYPE_PHOTO) {
+            await bot.telegram.sendPhoto(
+                telegramId,
+                { source: './public' + message.mediaFile },
+                {
+                    caption: messageText,
+                    reply_markup: keyboard.oneTime().resize().reply_markup,
+                    parse_mode: 'HTML'
+                }
+            )
+        } else if(message.mediaType === MEDIA_TYPE_AUDIO) {
+            await bot.telegram.sendAudio(
+                telegramId,
+                { source: './public' + message.mediaFile },
+                {
+                    caption: messageText,
+                    reply_markup: keyboard.oneTime().resize().reply_markup,
+                    parse_mode: 'HTML'
+                }
+            )
+        } else {
+            if(+message.number === 1 && +message.day === 1) {
+                await bot.telegram.sendSticker(telegramId, STICKER_ID_GREETING)
+            }
+            await bot.telegram.sendMessage(telegramId, messageText,
+                {
+                    reply_markup: keyboard.oneTime().resize().reply_markup,
+                    parse_mode: 'HTML'
+                })
+        }
+        return resolve()
+    })
+}
+
+function createKeyboard(message) {
     let keyboard = []
-    for (answer in questionAnswers) {
-        keyboard.push([Markup.button.callback(questionAnswers[answer], answer)])
+
+    if(message.verificationRequired) {
+        let i = 0
+        for (let answer in message.answers) {
+            keyboard.push([Markup.button.callback(`Вариант ${++i}`, answer)])
+        }
+    } else {
+        for (let answer in message.answers) {
+            keyboard.push([Markup.button.callback(message.answers[answer], answer)])
+        }
     }
 
-    return keyboard
+    return Markup.inlineKeyboard(keyboard)
 }
 
 function delay(ms) {
@@ -159,5 +151,6 @@ process.once('SIGTERM', () => bot.stop('SIGTERM'))
 module.exports = {
     bot: bot,
     sendMessages: sendMessages,
+    sendMessage: sendMessage,
     createKeyboard: createKeyboard
 }

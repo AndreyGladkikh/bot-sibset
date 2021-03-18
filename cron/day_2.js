@@ -5,14 +5,19 @@ const CronJob = cron.CronJob
 
 const DAY = 2
 const context = {messageNumber: 1, day: DAY}
+let messageNumber
+let quantity
 
 bot.command('210', async (ctx) => {
     try {
-        context.messageNumber = 1
-        const agents = await db.Agent.findActiveByDay(DAY)
-        const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber)
-
-        await sendMessages(agents, questions[0], context)
+        messageNumber = 1
+        quantity = 1
+        // context.messageNumber = 1
+        // const agents = await db.Agent.findActiveByDay(DAY)
+        // const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber, 1)
+        //
+        // await sendMessages(agents, questions[0], context)
+        await sendMessages(DAY, messageNumber, quantity)
     } catch (e) {
         console.log(e.message)
     }
@@ -20,9 +25,13 @@ bot.command('210', async (ctx) => {
 
 bot.command('218', async (ctx) => {
     try {
-        const agents = await db.Agent.findActiveByDay(DAY)
-        const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber)
-        await sendMessages(agents, questions[0], context)
+        messageNumber += quantity
+        quantity = 1
+        // context.messageNumber = 1
+        // const agents = await db.Agent.findActiveByDay(DAY)
+        // const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber, 1)
+        // await sendMessages(agents, questions[0], context)
+        await sendMessages(DAY, messageNumber, quantity)
     } catch (e) {
         console.log(e.message)
     }
@@ -30,9 +39,11 @@ bot.command('218', async (ctx) => {
 
 bot.command('219', async (ctx) => {
     try {
-        const agents = await db.Agent.findActiveByDay(DAY)
-        const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber)
-        await sendMessages(agents, questions, context)
+        messageNumber += quantity
+        // const agents = await db.Agent.findActiveByDay(DAY)
+        // const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber)
+        // await sendMessages(agents, questions, context)
+        await sendMessages(DAY, messageNumber)
     } catch (e) {
         console.log(e.message)
     }

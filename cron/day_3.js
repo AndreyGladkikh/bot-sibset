@@ -6,7 +6,7 @@ const CronJob = cron.CronJob
 const DAY = 3
 const context = {messageNumber: 1, day: DAY}
 
-bot.hears('310', async (ctx) => {
+bot.command('310', async (ctx) => {
     try {
         context.messageNumber = 1
         const agents = await db.Agent.findActiveByDay(DAY)
@@ -18,7 +18,8 @@ bot.hears('310', async (ctx) => {
     }
 })
 
-bot.hears('316', async (ctx) => {
+bot.command('316', async (ctx) => {
+    console.log(context)
     try {
         const agents = await db.Agent.findActiveByDay(DAY)
         const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber)
@@ -29,7 +30,8 @@ bot.hears('316', async (ctx) => {
     }
 })
 
-bot.hears('31730', async (ctx) => {
+bot.command('31730', async (ctx) => {
+    context.messageNumber = 15
     try {
         const agents = await db.Agent.findActiveByDay(DAY)
         const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber)
