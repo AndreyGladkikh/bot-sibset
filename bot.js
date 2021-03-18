@@ -27,7 +27,7 @@ function initializeBot() {
 
         bot.command('start', async ctx => {
             // ctx.scene.enter('day_1_scene_1')
-            const message = await Question.findWithAnswersByDayGtNumber(1, 1, 1)
+            const message = await Question.findWithAnswersByDayGtNumber(1, 1,  null, 1)
             await sendMessage(message[0], ctx.message.from.id)
         })
 
@@ -45,10 +45,10 @@ function initializeBot() {
     })
 }
 
-function sendMessages(day, fromMessageNumber, quantity) {
+function sendMessages(day, fromMessageNumber, toMessageNumber, quantity) {
     return new Promise(async (resolve, reject) => {
         const agents = await db.Agent.findActiveByDay(day)
-        let messages = await db.Question.findWithAnswersByDayGtNumber(day, fromMessageNumber, quantity)
+        let messages = await db.Question.findWithAnswersByDayGtNumber(day, fromMessageNumber, toMessageNumber, quantity)
 
         if(!Array.isArray(messages)) {
             messages = [messages]
@@ -82,8 +82,8 @@ function sendMessage(message, telegramId) {
         if(message.verificationRequired) {
             messageText += "\n"
             let i = 0
-            for (let answer in questionAnswers) {
-                messageText += `\n${++i}. ${questionAnswers[answer]}`
+            for (let answer in message.answers) {
+                messageText += `\n${++i}. ${message.answers[answer]}`
             }
         }
 

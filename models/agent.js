@@ -13,25 +13,10 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
 
-    static async findIdByTelegramId(telegramId) {
-      const result = await sequelize.query(`
-        select id from agents where "telegramId" = ${telegramId}
-        `, {type: sequelize.QueryTypes.SELECT, plain: true});
-      return result.id
-    }
-
     static findByTelegramId(telegramId) {
       return this.findOne({
         where: {
           telegramId: telegramId
-        }
-      })
-    }
-
-    static findByPhone(phone) {
-      return this.findOne({
-        where: {
-          phone: phone
         }
       })
     }

@@ -4,30 +4,22 @@ const cron = require('cron')
 const CronJob = cron.CronJob
 
 const DAY = 4
-const context = {messageNumber: 1, day: DAY}
+let messageNumber
 
-bot.hears('411', async (ctx) => {
+bot.command('411', async (ctx) => {
     try {
-        context.messageNumber = 1
-        const agents = await db.Agent.findActiveByDay(DAY)
-        const questions = await db.Question.findWithAnswersByDayGtNumber(DAY, context.messageNumber)
-
-        await sendMessages(agents, questions[0], context)
+        messageNumber = 1
+        await sendMessages(DAY, messageNumber)
     } catch (e) {
         console.log(e.message)
     }
 })
 
-new CronJob('0 0 10 * * *', async () => {
-
-}, null, true, 'Asia/Novosibirsk').start();
-
-new CronJob('0 0 18 * * *', function () {
-    console.log('You will see this message every second');
-    bot.telegram.sendMessage(184808957, 'cron')
-}, null, true, 'Asia/Novosibirsk').start();
-
-new CronJob('0 0 19 * * *', function () {
-    console.log('You will see this message every second');
-    bot.telegram.sendMessage(184808957, 'cron')
+new CronJob('0 0 11 * * *', async () => {
+    try {
+        messageNumber = 1
+        await sendMessages(DAY, messageNumber)
+    } catch (e) {
+        console.log(e.message)
+    }
 }, null, true, 'Asia/Novosibirsk').start();
