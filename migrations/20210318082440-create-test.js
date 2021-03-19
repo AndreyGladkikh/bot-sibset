@@ -8,20 +8,20 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      agentId: {
+      agent_id: {
         type: Sequelize.INTEGER
       },
-      questionId: {
+      message_id: {
         type: Sequelize.INTEGER
       },
-      answerId: {
+      answer_id: {
         type: Sequelize.INTEGER
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }

@@ -7,15 +7,18 @@ deploy_dev:
   environment:
     name: development
   script:
-    - echo TEXT_FILE=$TEXT_FILE_DEV > .env.local
+    - sudo rsync -acv --progress --delete --exclude="node_modules" --exclude=".gitignore" --exclude=".git" ./ /fs/www/dev-finn.sibset.ru
+    - cd /fs/www/dev-finn.sibset.ru
+    - echo NODE_ENV=development > .env.local
     - echo BOT_TOKEN=$BOT_TOKEN_DEV >> .env.local
-    - echo HTTP_URL=$HTTP_URL_DEV >> .env.local
     - echo LOGSTASH_TYPE=dev-c3po.sibset.ru >> .env.local
     - echo LOG_LEVEL=debug >> .env.local
+    - echo DB_USER=$DB_USER_DEV >> .env.local
+    - echo DB_PASS=$DB_PASS_DEV >> .env.local
+    - echo DB_NAME=$DB_NAME_DEV >> .env.local
+    - echo DB_HOST=$DB_HOST_DEV >> .env.local
     - npm i
-    - cross-env DATABASE_URI=$DEV_SIB_DATABASE_URI node_modules/.bin/sequelize-cli db:migrate
-    - pm2 startOrReload ecosystem.json --only server
-    - pm2 startOrReload ecosystem.json --only worker
+    - pm2 start index.js
   only:
     - master
     - /^Web-/
@@ -28,15 +31,17 @@ deploy_prod:
   environment:
     name: production
   script:
-    - echo TEXT_FILE=$TEXT_FILE_PROD > .env.local
+    - sudo rsync -acv --progress --delete --exclude="node_modules" --exclude=".gitignore" --exclude=".git" ./ /fs/www/finn.sibset.ru
+    - echo NODE_ENV=production > .env.local
     - echo BOT_TOKEN=$BOT_TOKEN_PROD >> .env.local
-    - echo HTTP_URL=$HTTP_URL_PROD >> .env.local
     - echo LOGSTASH_TYPE=c3po.sibset.ru >> .env.local
     - echo LOG_LEVEL=info >> .env.local
+    - echo DB_USER=$DB_USER_PROD >> .env.local
+    - echo DB_PASS=$DB_PASS_PROD >> .env.local
+    - echo DB_NAME=$DB_NAME_PROD >> .env.local
+    - echo DB_HOST=$DB_HOST_PROD >> .env.local
     - npm i
-    - cross-env DATABASE_URI=$PROD_SIB_DATABASE_URI node_modules/.bin/sequelize-cli db:migrate
-    - pm2 startOrReload ecosystem.json --only server --env production
-    - pm2 startOrReload ecosystem.json --only worker --env production
+    - pm2 startOrReload index.js
   only:
     - master
   tags:

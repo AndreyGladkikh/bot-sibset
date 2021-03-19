@@ -1,7 +1,7 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('questions', {
+    await queryInterface.createTable('answers', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -9,37 +9,28 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       text: {
-        type: Sequelize.TEXT
+        type: Sequelize.STRING
       },
-      day: {
+      message_id: {
         type: Sequelize.INTEGER
       },
-      priority: {
+      sort: {
         type: Sequelize.INTEGER
       },
-      isTest: {
+      is_right: {
         type: Sequelize.BOOLEAN
       },
-      mediaFile: {
-        type: Sequelize.STRING
-      },
-      mediaType: {
-        type: Sequelize.STRING
-      },
-      alias: {
-        type: Sequelize.STRING
-      },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE
       }
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('questions');
+    await queryInterface.dropTable('answers');
   }
 };

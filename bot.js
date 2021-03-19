@@ -1,11 +1,11 @@
 require('dotenv-flow').config();
-const {Scenes, session, Telegraf, Markup} = require('telegraf')
+const {session, Telegraf, Markup} = require('telegraf')
+const rateLimit = require('telegraf-ratelimit')
 const fs = require('fs')
 const scenes = require('./scenes.js')
-const text = require('./text/scenes.json')
 const handleAnswer = require('./agent-answers-handler')
 const db = require('./models')
-const Question = db.Question
+const Message = db.Message
 const Agent = db.Agent
 const Test = db.Test
 
@@ -20,23 +20,27 @@ const bot = new Telegraf(process.env.BOT_TOKEN)
 function initializeBot() {
     return new Promise(async (resolve, reject) => {
         const stage = await scenes.getStage()
-        const questions = await Question.findAllWithAnswers()
+        const messages = await Message.findAllWithAnswers()
 
+        bot.use(rateLimit({
+            window: 2000,
+            limit: 1
+        }))
         bot.use(session())
         bot.use(stage.middleware())
 
         bot.command('start', async ctx => {
-            // ctx.scene.enter('day_1_scene_1')
+            // await ctx.scene.enter('day_1_scene_1')
             const message = await Question.findWithAnswersByDayGtNumber(1, 1,  null, 1)
-            await sendMessage(message[0], ctx.message.from.id)
+            await sendMessage(message, ctx.message.from.id)
         })
 
         bot.on('callback_query',async(ctx, next) => {
-            const question = questions.find((element, index, array) => {
+            const message = messages.find((element, index, array) => {
                 return element.answers && String(ctx.callbackQuery.data) in element.answers
             })
-            if(question) {
-                await handleAnswer(ctx, question)
+            if(message) {
+                await handleAnswer(ctx, message)
             }
         })
 
@@ -47,8 +51,8 @@ function initializeBot() {
 
 function sendMessages(day, fromMessageNumber, toMessageNumber, quantity) {
     return new Promise(async (resolve, reject) => {
-        const agents = await db.Agent.findActiveByDay(day)
-        let messages = await db.Question.findWithAnswersByDayGtNumber(day, fromMessageNumber, toMessageNumber, quantity)
+        const agents = await Agent.findActiveByDay(day)
+        let messages = await Message.findWithAnswersByDayGtNumber(day, fromMessageNumber, toMessageNumber, quantity)
 
         if(!Array.isArray(messages)) {
             messages = [messages]
@@ -76,10 +80,13 @@ function sendMessages(day, fromMessageNumber, toMessageNumber, quantity) {
 
 function sendMessage(message, telegramId) {
     return new Promise(async (resolve, reject) => {
+        if(Array.isArray(message)) {
+            message = message[0]
+        }
         const keyboard = createKeyboard(message)
 
         let messageText = message.text
-        if(message.verificationRequired) {
+        if(message.verification_required) {
             messageText += "\n"
             let i = 0
             for (let answer in message.answers) {
@@ -87,20 +94,20 @@ function sendMessage(message, telegramId) {
             }
         }
 
-        if(message.mediaType === MEDIA_TYPE_PHOTO) {
+        if(message.media_file_type === MEDIA_TYPE_PHOTO) {
             await bot.telegram.sendPhoto(
                 telegramId,
-                { source: './public' + message.mediaFile },
+                { source: './public' + message.media_file_path },
                 {
                     caption: messageText,
                     reply_markup: keyboard.oneTime().resize().reply_markup,
                     parse_mode: 'HTML'
                 }
             )
-        } else if(message.mediaType === MEDIA_TYPE_AUDIO) {
+        } else if(message.media_file_type === MEDIA_TYPE_AUDIO) {
             await bot.telegram.sendAudio(
                 telegramId,
-                { source: './public' + message.mediaFile },
+                { source: './public' + message.media_file_path },
                 {
                     caption: messageText,
                     reply_markup: keyboard.oneTime().resize().reply_markup,
@@ -124,7 +131,7 @@ function sendMessage(message, telegramId) {
 function createKeyboard(message) {
     let keyboard = []
 
-    if(message.verificationRequired) {
+    if(message.verification_required) {
         let i = 0
         for (let answer in message.answers) {
             keyboard.push([Markup.button.callback(`Вариант ${++i}`, answer)])
@@ -151,6 +158,5 @@ process.once('SIGTERM', () => bot.stop('SIGTERM'))
 module.exports = {
     bot: bot,
     sendMessages: sendMessages,
-    sendMessage: sendMessage,
-    createKeyboard: createKeyboard
+    sendMessage: sendMessage
 }

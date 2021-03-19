@@ -15,12 +15,13 @@ module.exports = (sequelize, DataTypes) => {
   };
   Test.init({
     agentId: DataTypes.INTEGER,
-    questionId: DataTypes.INTEGER,
+    messageId: DataTypes.INTEGER,
     answerId: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'Test',
     tableName: "tests",
+    underscored: true
   });
   return Test;
 };

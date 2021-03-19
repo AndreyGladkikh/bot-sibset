@@ -15,8 +15,8 @@ module.exports = (sequelize, DataTypes) => {
   };
   Answer.init({
     text: DataTypes.STRING,
-    messageId: DataTypes.INTEGER,
-    sort: DataTypes.INTEGER,
+    questionId: DataTypes.INTEGER,
+    priority: DataTypes.INTEGER,
     isRight: DataTypes.BOOLEAN
   }, {
     sequelize,
